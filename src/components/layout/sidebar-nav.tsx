@@ -14,6 +14,7 @@ import {
   Inbox,
   Send,
   Shield,
+  CircleDollarSign,
   Store,
   Users,
 } from "lucide-react";
@@ -84,6 +85,11 @@ const managerNavItems: NavItem[] = [
     href: "/admin/staff",
     label: "スタッフ管理",
     icon: Users,
+  },
+  {
+    href: "/admin/wage-rules",
+    label: "給与ルール設定",
+    icon: CircleDollarSign,
   },
   {
     href: "/admin/store",

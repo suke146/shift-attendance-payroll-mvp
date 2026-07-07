@@ -30,6 +30,10 @@ function redirectToCreate(message: string): never {
   redirect(`/admin/shifts/create?message=${encodeURIComponent(message)}`);
 }
 
+function redirectToManage(message: string): never {
+  redirect(`/admin/shifts?message=${encodeURIComponent(message)}`);
+}
+
 async function getManagerProfile() {
   const supabase = await createClient();
 
@@ -48,11 +52,11 @@ async function getManagerProfile() {
     .single();
 
   if (error || !profile) {
-    redirectToCreate("プロフィール情報が見つかりません");
+    redirectToManage("プロフィール情報が見つかりません");
   }
 
   if (!profile.is_active) {
-    redirectToCreate("このユーザーは無効化されています");
+    redirectToManage("このユーザーは無効化されています");
   }
 
   if (profile.role !== "manager" && profile.role !== "admin") {
@@ -60,7 +64,7 @@ async function getManagerProfile() {
   }
 
   if (!profile.store_id && profile.role !== "admin") {
-    redirectToCreate("店舗情報が未設定です");
+    redirectToManage("店舗情報が未設定です");
   }
 
   return {
@@ -91,10 +95,7 @@ export async function createShiftFromRequestAction(formData: FormData) {
     redirectToCreate("希望シフトが見つかりません");
   }
 
-  if (
-    profile.role !== "admin" &&
-    request.store_id !== profile.store_id
-  ) {
+  if (profile.role !== "admin" && request.store_id !== profile.store_id) {
     redirectToCreate("別店舗の希望シフトは確定できません");
   }
 
@@ -131,6 +132,7 @@ export async function createShiftFromRequestAction(formData: FormData) {
 
   revalidatePath("/admin/shifts/create");
   revalidatePath("/admin/shift-requests");
+  revalidatePath("/admin/shifts");
   revalidatePath("/shifts");
 
   redirectToCreate("希望シフトから確定シフトを作成しました");
@@ -168,10 +170,7 @@ export async function createManualShiftAction(formData: FormData) {
     redirectToCreate("無効化されているスタッフにはシフトを作成できません");
   }
 
-  if (
-    profile.role !== "admin" &&
-    targetStaff.store_id !== profile.store_id
-  ) {
+  if (profile.role !== "admin" && targetStaff.store_id !== profile.store_id) {
     redirectToCreate("別店舗のスタッフにはシフトを作成できません");
   }
 
@@ -203,4 +202,124 @@ export async function createManualShiftAction(formData: FormData) {
   revalidatePath("/shifts");
 
   redirectToCreate("手動で確定シフトを作成しました");
+}
+
+export async function updateShiftAction(formData: FormData) {
+  const { supabase, profile } = await getManagerProfile();
+
+  const shiftId = getFormValue(formData, "shiftId");
+  const staffId = getFormValue(formData, "staffId");
+  const shiftDate = getFormValue(formData, "shiftDate");
+  const startTime = getFormValue(formData, "startTime");
+  const endTime = getFormValue(formData, "endTime");
+  const breakMinutes = getFormNumber(formData, "breakMinutes");
+  const note = getFormValue(formData, "note");
+
+  if (!shiftId || !staffId || !shiftDate || !startTime || !endTime) {
+    redirectToManage("シフト情報が不足しています");
+  }
+
+  if (startTime >= endTime) {
+    redirectToManage("終了時刻は開始時刻より後にしてください");
+  }
+
+  const { data: currentShift, error: shiftError } = await supabase
+    .from("shifts")
+    .select("id, store_id")
+    .eq("id", shiftId)
+    .single();
+
+  if (shiftError || !currentShift) {
+    redirectToManage("更新対象のシフトが見つかりません");
+  }
+
+  if (profile.role !== "admin" && currentShift.store_id !== profile.store_id) {
+    redirectToManage("別店舗のシフトは更新できません");
+  }
+
+  const { data: targetStaff, error: staffError } = await supabase
+    .from("profiles")
+    .select("id, store_id, is_active")
+    .eq("id", staffId)
+    .single();
+
+  if (staffError || !targetStaff) {
+    redirectToManage("スタッフ情報が見つかりません");
+  }
+
+  if (!targetStaff.is_active) {
+    redirectToManage("無効化されているスタッフには変更できません");
+  }
+
+  if (profile.role !== "admin" && targetStaff.store_id !== profile.store_id) {
+    redirectToManage("別店舗のスタッフには変更できません");
+  }
+
+  const storeId =
+    profile.role === "admin" ? targetStaff.store_id : profile.store_id;
+
+  if (!storeId) {
+    redirectToManage("店舗情報が見つかりません");
+  }
+
+  const { error } = await supabase
+    .from("shifts")
+    .update({
+      store_id: storeId,
+      staff_id: staffId,
+      shift_date: shiftDate,
+      start_time: startTime,
+      end_time: endTime,
+      break_minutes: breakMinutes,
+      note: note || null,
+    })
+    .eq("id", shiftId);
+
+  if (error) {
+    console.error("updateShiftAction error:", error);
+    redirectToManage("確定シフトの更新に失敗しました");
+  }
+
+  revalidatePath("/admin/shifts");
+  revalidatePath("/admin/shifts/create");
+  revalidatePath("/shifts");
+
+  redirectToManage("確定シフトを更新しました");
+}
+
+export async function deleteShiftAction(formData: FormData) {
+  const { supabase, profile } = await getManagerProfile();
+
+  const shiftId = getFormValue(formData, "shiftId");
+
+  if (!shiftId) {
+    redirectToManage("削除対象のシフトが見つかりません");
+  }
+
+  const { data: currentShift, error: shiftError } = await supabase
+    .from("shifts")
+    .select("id, store_id")
+    .eq("id", shiftId)
+    .single();
+
+  if (shiftError || !currentShift) {
+    redirectToManage("削除対象のシフトが見つかりません");
+  }
+
+  if (profile.role !== "admin" && currentShift.store_id !== profile.store_id) {
+    redirectToManage("別店舗のシフトは削除できません");
+  }
+
+  const { error } = await supabase.from("shifts").delete().eq("id", shiftId);
+
+  if (error) {
+    console.error("deleteShiftAction error:", error);
+    redirectToManage("確定シフトの削除に失敗しました");
+  }
+
+  revalidatePath("/admin/shifts");
+  revalidatePath("/admin/shifts/create");
+  revalidatePath("/shifts");
+
+  redirectToManage("確定シフトを削除しました");
 }

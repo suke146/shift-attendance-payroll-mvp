@@ -27,7 +27,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
         <CardHeader>
           <CardTitle>新規登録</CardTitle>
           <CardDescription>
-            最初のMVP用アカウントを作成します。
+            スタッフ用アカウントを作成します。
           </CardDescription>
         </CardHeader>
 

@@ -3,11 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { createClient } from "@/lib/supabase/server";
+import {
+  getShiftSubmissionDeadlineStatus,
+  getTargetMonthFromDate as getDeadlineTargetMonthFromDate,
+} from "@/lib/shift-submission-deadlines";
 import {
   calculateShiftRequestEstimate,
   type WageRule,
 } from "@/lib/wage";
-import { createClient } from "@/lib/supabase/server";
 
 function getFormValue(formData: FormData, key: string): string {
   const value = formData.get(key);
@@ -38,7 +42,11 @@ function redirectToRequests(message: string): never {
   redirect(`/shifts/requests?message=${encodeURIComponent(message)}`);
 }
 
-function getTargetMonthFromDate(dateText: string): string {
+/**
+ * shift_requests.target_month 用
+ * 既存DBが YYYY-MM-01 形式で保存しているため、この関数は残します。
+ */
+function getShiftRequestTargetMonth(dateText: string): string {
   return `${dateText.slice(0, 7)}-01`;
 }
 
@@ -96,7 +104,7 @@ export async function createShiftRequestAction(formData: FormData) {
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select(
-      "id, store_id, is_active, employment_type, hourly_wage, monthly_salary"
+      "id, store_id, role, is_active, employment_type, hourly_wage, monthly_salary"
     )
     .eq("id", user.id)
     .single();
@@ -111,6 +119,16 @@ export async function createShiftRequestAction(formData: FormData) {
 
   if (!profile.is_active) {
     redirectToSubmit("このユーザーは無効化されています");
+  }
+
+  const deadlineStatus = await getShiftSubmissionDeadlineStatus({
+    supabase,
+    storeId: profile.store_id,
+    targetMonth: getDeadlineTargetMonthFromDate(requestDate),
+  });
+
+  if (!deadlineStatus.isOpen && profile.role === "staff") {
+    redirectToSubmit("提出期限を過ぎているため、希望シフトを提出できません");
   }
 
   const { data: existingRequest } = await supabase
@@ -160,7 +178,7 @@ export async function createShiftRequestAction(formData: FormData) {
     .insert({
       store_id: profile.store_id,
       staff_id: user.id,
-      target_month: getTargetMonthFromDate(requestDate),
+      target_month: getShiftRequestTargetMonth(requestDate),
       request_date: requestDate,
       request_type: requestType,
       start_time: requestType === "work" ? startTime : null,
@@ -234,6 +252,43 @@ export async function deleteShiftRequestAction(formData: FormData) {
     }
 
     redirectToSubmit("削除対象が見つかりません");
+  }
+
+  const { data: shiftRequest, error: shiftRequestError } = await supabase
+    .from("shift_requests")
+    .select("id, staff_id, store_id, request_date")
+    .eq("id", shiftRequestId)
+    .eq("staff_id", user.id)
+    .single();
+
+  if (shiftRequestError || !shiftRequest) {
+    if (returnTo === "/shifts/requests") {
+      redirectToRequests("削除対象の希望シフトが見つかりません");
+    }
+
+    redirectToSubmit("削除対象の希望シフトが見つかりません");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, role, store_id")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role === "staff") {
+    const deadlineStatus = await getShiftSubmissionDeadlineStatus({
+      supabase,
+      storeId: shiftRequest.store_id,
+      targetMonth: getDeadlineTargetMonthFromDate(shiftRequest.request_date),
+    });
+
+    if (!deadlineStatus.isOpen) {
+      if (returnTo === "/shifts/requests") {
+        redirectToRequests("提出期限を過ぎているため、希望シフトを削除できません");
+      }
+
+      redirectToSubmit("提出期限を過ぎているため、希望シフトを削除できません");
+    }
   }
 
   const { error } = await supabase

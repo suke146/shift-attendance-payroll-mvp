@@ -12,6 +12,7 @@ import {
   } from "@/components/ui/card";
   import { Input } from "@/components/ui/input";
   import { Label } from "@/components/ui/label";
+  import { SubmissionDeadlineCard } from "@/components/shifts/submission-deadline-card";
   import {
     Table,
     TableBody,
@@ -134,6 +135,8 @@ import {
             勤務希望または休み希望を日ごとに提出します。勤務希望の場合は、提出時点の時給と給与ルールから概算収入を計算します。
           </p>
         </div>
+
+        <SubmissionDeadlineCard />
   
         {params.message ? (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">

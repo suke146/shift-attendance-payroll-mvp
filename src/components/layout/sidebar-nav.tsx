@@ -9,6 +9,7 @@ import {
   CalendarPlus,
   AlertTriangle,
   ListChecks,
+  Table2,
   Calculator,
   ClipboardList,
   FileSpreadsheet,
@@ -49,6 +50,11 @@ const staffNavItems: NavItem[] = [
     href: "/admin/shortages",
     label: "不足チェック",
     icon: AlertTriangle,
+  },
+  {
+    href: "/admin/line-chart",
+    label: "ライン表作成",
+    icon: Table2,
   },
   {
     href: "/shifts/requests",

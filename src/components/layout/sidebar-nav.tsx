@@ -7,6 +7,8 @@ import {
   CalendarCheck,
   CalendarDays,
   CalendarPlus,
+  AlertTriangle,
+  ListChecks,
   Calculator,
   ClipboardList,
   FileSpreadsheet,
@@ -37,6 +39,16 @@ const staffNavItems: NavItem[] = [
     href: "/shifts/submit",
     label: "希望シフト提出",
     icon: Send,
+  },
+  {
+    href: "/admin/staffing-requirements",
+    label: "必要人数設定",
+    icon: ListChecks,
+  },
+  {
+    href: "/admin/shortages",
+    label: "不足チェック",
+    icon: AlertTriangle,
   },
   {
     href: "/shifts/requests",

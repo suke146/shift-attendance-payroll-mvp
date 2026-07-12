@@ -244,6 +244,7 @@ export default async function ShortagesPage({
                       <TableHead className="text-right">予定人数</TableHead>
                       <TableHead className="text-right">不足</TableHead>
                       <TableHead>メモ</TableHead>
+                      <TableHead className="text-right">募集</TableHead>
                     </TableRow>
                   </TableHeader>
 
@@ -281,6 +282,13 @@ export default async function ShortagesPage({
                         </TableCell>
 
                         <TableCell>{row.note ?? "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/admin/shift-openings?date=${row.date}&start=${row.startTime}&end=${row.endTime}&count=${row.shortageCount}`}>
+                              募集する
+                            </Link>
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

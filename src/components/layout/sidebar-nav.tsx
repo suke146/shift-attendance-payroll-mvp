@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CalendarPlus,
   AlertTriangle,
+  Megaphone,
   ListChecks,
   Table2,
   Calculator,
@@ -62,6 +63,11 @@ const staffNavItems: NavItem[] = [
     icon: ClipboardList,
   },
   {
+    href: "/shift-openings",
+    label: "不足募集",
+    icon: Megaphone,
+  },
+  {
     href: "/shifts",
     label: "確定シフト",
     icon: CalendarCheck,
@@ -79,6 +85,11 @@ const staffNavItems: NavItem[] = [
 ];
 
 const managerNavItems: NavItem[] = [
+  {
+    href: "/admin/shift-openings",
+    label: "不足募集管理",
+    icon: Megaphone,
+  },
   {
     href: "/admin/shift-requests",
     label: "希望シフト一覧",
